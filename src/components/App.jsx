@@ -16,6 +16,7 @@ export class App extends Component {
     error: null,
     isLoading: false,
     showModal: null,
+    totalHits: null,
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -42,6 +43,7 @@ export class App extends Component {
             return toast.error(
               'There is no images found with that search request'
             );
+            
           }
           const mappedImages = data.data.hits.map(
             ({ id, webformatURL, tags, largeImageURL }) => ({
@@ -53,6 +55,7 @@ export class App extends Component {
           );
           this.setState({
             images: [...this.state.images, ...mappedImages],
+            totalHits: data.totalHits,
           });
         });
       } catch (error) {
@@ -104,6 +107,7 @@ export class App extends Component {
             <Button loadMore={this.loadMore} />
           </>
         )}
+      
         {showModal && (
           <Modal
             lgImage={showModal.largeImageURL}
