@@ -107,7 +107,6 @@ export class App extends Component {
             <Button loadMore={this.loadMore} />
           </>
         )}
-      
         {showModal && (
           <Modal
             lgImage={showModal.largeImageURL}
