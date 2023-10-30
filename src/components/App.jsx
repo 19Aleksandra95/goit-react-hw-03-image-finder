@@ -6,7 +6,8 @@ import ImageGallery from './ImageGallery/ImageGallery';
 import Modal from './Modal/Modal';
 import Button from './Button/Button';
 import Loader from './Loader/Loader';
-import { fetchImages } from 'components/services/fetchImages';
+import fetchImages  from './services/api';
+import Notiflix from 'notiflix';
 
 export class App extends Component {
   state = {
@@ -19,52 +20,85 @@ export class App extends Component {
     totalHits: null,
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    const prevSearch = prevState.searchRequest;
-    const currentSearch = this.state.searchRequest;
-    const prevGalleryPage = prevState.galleryPage;
-    const currentGalleryPage = this.state.galleryPage;
+  // componentDidUpdate(prevProps, prevState) {
+  //   const prevSearch = prevState.searchRequest;
+  //   const currentSearch = this.state.searchRequest;
+  //   const prevGalleryPage = prevState.galleryPage;
+  //   const currentGalleryPage = this.state.galleryPage;
 
-    if (
-      prevSearch !== currentSearch ||
-      prevGalleryPage !== currentGalleryPage
-    ) {
-      this.updateImages();
+  //   if (
+  //     prevSearch !== currentSearch ||
+  //     prevGalleryPage !== currentGalleryPage
+  //   ) {
+  //     this.updateImages();
+  //   }
+  // }
+
+  // updateImages() {
+  //   const { searchRequest, galleryPage } = this.state;
+  //   this.setState({ isLoading: true });
+  //   setTimeout(() => {
+  //     try {
+  //       fetchImages(searchRequest, galleryPage).then(data => {
+  //         console.log(data);
+  //         if (data.totalHits === 0) {
+  //           return toast.error(
+  //             'There is no images found with that search request'
+  //           );
+            
+  //         }
+  //         const mappedImages = data.data.hits.map(
+  //           ({ id, webformatURL, tags, largeImageURL }) => ({
+  //             id,
+  //             webformatURL,
+  //             tags,
+  //             largeImageURL,
+  //           })
+  //         );
+  //         this.setState({
+  //           images: [...this.state.images, ...mappedImages],
+  //           totalHits: data.totalHits,
+  //         });
+  //       });
+  //     } catch (error) {
+  //       this.setState({ error });
+  //     } finally {
+  //       this.setState({ isLoading: false });
+  //     }
+  //   }, 1000);
+  // }
+
+  componentDidUpdate(_, prevState) {
+    const { searchRequest, galleryPage } = this.state;
+
+    if (prevState.searchRequest !== searchRequest || prevState.galleryPage !== galleryPage) {
+      this.fetchImages();
     }
   }
 
-  updateImages() {
+  fetchImages = () => {
     const { searchRequest, galleryPage } = this.state;
-    this.setState({ isLoading: true });
-    setTimeout(() => {
-      try {
-        fetchImages(searchRequest, galleryPage).then(data => {
-          if (!data.data.hits.length) {
-            return toast.error(
-              'There is no images found with that search request'
-            );
-            
-          }
-          const mappedImages = data.data.hits.map(
-            ({ id, webformatURL, tags, largeImageURL }) => ({
-              id,
-              webformatURL,
-              tags,
-              largeImageURL,
-            })
-          );
-          this.setState({
-            images: [...this.state.images, ...mappedImages],
-            totalHits: data.totalHits,
-          });
-        });
-      } catch (error) {
-        this.setState({ error });
-      } finally {
+
+    this.setState({ isLoading: true, error: null });
+    fetchImages(searchRequest, galleryPage)
+      .then(data => {
+        console.log(data);
+        if (data.totalHits === 0) {
+          Notiflix.Report.info('Wrong 😪', 'Try again');
+        }
+        this.setState(prevState => ({
+          images:
+            this.state.galleryPage === 1
+              ? data.hits
+              : [...prevState.images, ...data.hits],
+          totalHits: data.totalHits,
+        }));
+      })
+      .catch(error => this.setState({ error: error.message }))
+      .finally(() => {
         this.setState({ isLoading: false });
-      }
-    }, 1000);
-  }
+      });
+  };
 
   handleSearchSubmit = searchRequest => {
     this.setState({
@@ -78,6 +112,7 @@ export class App extends Component {
     this.setState(prevState => ({
       galleryPage: prevState.galleryPage + 1,
     }));
+    console.log(this.state.galleryPage)
   };
 
   showModalImage = id => {
@@ -95,17 +130,15 @@ export class App extends Component {
   };
 
   render() {
-    const { images, isLoading, error, showModal } = this.state;
+    const { images, isLoading, error, showModal, totalHits } = this.state;
     return (
       <>
         <Searchbar onSearch={this.handleSearchSubmit} />
         {error && toast.error(`Whoops, something went wrong: ${error.message}`)}
+          <ImageGallery images={images} handlePreview={this.showModalImage} />
         {isLoading && <Loader color={'#1dbc52'} size={32} />}
-        {images.length > 0 && (
-          <>
-            <ImageGallery images={images} handlePreview={this.showModalImage} />
-            <Button loadMore={this.loadMore} />
-          </>
+        {totalHits>images.length && (
+        <Button loadMore={this.loadMore} />
         )}
         {showModal && (
           <Modal
